@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File
 from backend.project_manager import create_project, add_image
+from typing import Annotated
 
 app = FastAPI()
 @app.post("/projects")
@@ -8,10 +9,13 @@ def new_project():
     return {"project_id": project_id}
 
 @app.post("/projects/{project_id}/images")
-def upload_image(project_id: str, image: UploadFile):
-    path = add_image(project_id, image)
+def upload_images(project_id: str, images: Annotated[list[UploadFile], File()]):
+    paths = []
+    for image in images:
+        path = add_image(project_id, image)
+        paths.append(path)
 
     return {
-        "filename": image.filename,
-        "Saved to": str(path)
+        "filenames": [image.filename for image in images],
+        "Saved to": [str(path) for path in paths]
         }
