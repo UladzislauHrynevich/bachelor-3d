@@ -1,0 +1,8 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Generated project data
+storage/projects/*
+!storage/projects/.gitkeep
