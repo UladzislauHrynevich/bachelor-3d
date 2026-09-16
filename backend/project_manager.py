@@ -21,4 +21,4 @@ def create_project():
         project_path.joinpath(directory).mkdir()
         print(f"Created directory: {project_path.joinpath(directory)}")
 
-    return project_id, project_path
+    return project_id
