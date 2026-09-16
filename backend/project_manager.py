@@ -1,6 +1,7 @@
 from pathlib import Path
 from uuid import uuid4
 import shutil
+from PIL import Image
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECTS_DIR = BASE_DIR / "storage" / "projects"
@@ -33,7 +34,12 @@ def add_image(project_id, image):
     if extension.lower() not in [".jpg", ".jpeg", ".png"]:
         raise ValueError(f"Unsupported file type: {extension}. "
                          f"Only .jpg, .jpeg, and .png are allowed.")
-    
+    try:
+        Image.open(image.file).verify()
+        Image.file.seek(0)
+    except Exception:
+        raise ValueError(f"File {image.filename} is not a valid image.")
+
     destination_path = input_path / image.filename
 
     with open (destination_path, "wb") as file:
