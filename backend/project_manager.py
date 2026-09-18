@@ -24,25 +24,29 @@ def create_project():
 
     return project_id
 
-def add_image(project_id, image):
+def get_project_path(project_id):
     project_path = PROJECTS_DIR / project_id
     if not project_path.exists():
         raise ValueError(f"Project with ID {project_id} does not exist.")
-    input_path = project_path / "input"
+    return project_path
 
+def add_image(project_path, image):
+    input_path = project_path / "input"
+    destination_path = input_path / image.filename
+
+    with open (destination_path, "wb") as file:
+        file.write(image.file.read())
+        
+    return destination_path
+
+def validate_image(image):
     extension = Path(image.filename).suffix
     if extension.lower() not in [".jpg", ".jpeg", ".png"]:
         raise ValueError(f"Unsupported file type: {extension}. "
                          f"Only .jpg, .jpeg, and .png are allowed.")
     try:
         Image.open(image.file).verify()
-        Image.file.seek(0)
+        image.file.seek(0)
     except Exception:
         raise ValueError(f"File {image.filename} is not a valid image.")
-
-    destination_path = input_path / image.filename
-
-    with open (destination_path, "wb") as file:
-        file.write(image.file.read())
-    return destination_path
 
