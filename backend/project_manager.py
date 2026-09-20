@@ -10,6 +10,7 @@ def create_project():
     print(PROJECTS_DIR)
 
     project_id = uuid4().hex[:8]
+
     print(project_id)
 
     project_path = PROJECTS_DIR / project_id

@@ -1,12 +1,13 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from project_manager import create_project, add_image, validate_image
+from project_manager import create_project, add_image, validate_image, get_project_path
 from typing import Annotated
 
 app = FastAPI()
 @app.post("/projects")
 def new_project():
     project_id = create_project()
-    return {"project_id": project_id}
+    project_path = get_project_path(project_id)
+    return {"project_id": project_id, "project_path": project_path}
 
 
 
@@ -33,3 +34,4 @@ def upload_images(project_id: str, images: Annotated[list[UploadFile], File()]):
         "filenames": [image.filename for image in images],
         "Saved to": [str(path) for path in paths]
     }
+
