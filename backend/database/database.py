@@ -13,10 +13,7 @@ if DATABASE_URL is None:
 
 engine = create_engine(DATABASE_URL)
 
-with engine.connect() as connection:
-    print("DB connect")
-
 SessionLocal = sessionmaker(bind=engine)
 
-class Base(DeclarativeBase)
+class Base(DeclarativeBase):
     pass
