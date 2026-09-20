@@ -9,11 +9,11 @@ PROJECTS_DIR = BASE_DIR / "storage" / "projects"
 def create_project():
     print(PROJECTS_DIR)
 
-    project_id = uuid4().hex[:8]
+    project_id = uuid4()
 
     print(project_id)
 
-    project_path = PROJECTS_DIR / project_id
+    project_path = PROJECTS_DIR / str(project_id)
     print(project_path)
     project_path.mkdir()
 
@@ -26,7 +26,7 @@ def create_project():
     return project_id
 
 def get_project_path(project_id):
-    project_path = PROJECTS_DIR / project_id
+    project_path = PROJECTS_DIR / str(project_id)
     if not project_path.exists():
         raise ValueError(f"Project with ID {project_id} does not exist.")
     return project_path
