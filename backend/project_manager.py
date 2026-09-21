@@ -1,35 +1,31 @@
 from pathlib import Path
-from uuid import uuid4
-import shutil
 from PIL import Image
+from backend.database.models import Project
 
+#its should be like a manger of files
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECTS_DIR = BASE_DIR / "storage" / "projects"
 
-def create_project():
-    print(PROJECTS_DIR)
+def create_project_directory(project):
+    project_id = str(project.id)
+    project_directory = PROJECTS_DIR / project_id
+    project_directory.mkdir()
 
-    project_id = uuid4()
-
-    print(project_id)
-
-    project_path = PROJECTS_DIR / str(project_id)
-    print(project_path)
-    project_path.mkdir()
-
-
-    directories = ["input","analysis", "colmap", "gaussian", "result", "metrics","logs"]
+    directories = [ 
+    "input",
+    "analysis", 
+    "colmap",
+    "gaussian",
+    "result", 
+    "metrics",
+    "logs"
+    ]
+    
     for directory in directories:
-        project_path.joinpath(directory).mkdir()
-        print(f"Created directory: {project_path.joinpath(directory)}")
+        project_directory.joinpath(directory).mkdir()
 
-    return project_id
+    return project_directory
 
-def get_project_path(project_id):
-    project_path = PROJECTS_DIR / str(project_id)
-    if not project_path.exists():
-        raise ValueError(f"Project with ID {project_id} does not exist.")
-    return project_path
 
 def add_image(project_path, image):
     input_path = project_path / "input"
