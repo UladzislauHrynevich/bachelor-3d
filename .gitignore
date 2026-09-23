@@ -7,4 +7,4 @@ __pycache__/
 # Generated project data
 storage/projects/*
 !storage/projects/.gitkeep
-./vscode/settings.json
+.vscode/

@@ -18,7 +18,6 @@ app = FastAPI()
 @app.post("/projects")
 def new_project(db: Session = Depends(get_db)):
     project = create_project(db)
-
     return {
         "project_id": project.id
     }
@@ -40,8 +39,6 @@ def upload_images(
             status_code=404,
             detail=f"Project {project_id} not found"
         )
-
-    project_dir = get_project_directory(project)
     
     for image in images:
         try:
@@ -51,7 +48,7 @@ def upload_images(
 
     paths = []
     for image in images:
-        path = add_image(project_dir, image)
+        path = add_image(project_id, image)
         paths.append(path)
 
     return {
