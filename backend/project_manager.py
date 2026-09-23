@@ -1,5 +1,6 @@
 from pathlib import Path
 from PIL import Image
+import shutil
 from backend.database.models import Project
 
 #its should be like a manger of files
@@ -7,6 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECTS_DIR = BASE_DIR / "storage" / "projects"
 
 def create_project_directory(project):
+
     project_id = str(project.id)
     project_directory = PROJECTS_DIR / project_id
     project_directory.mkdir()
@@ -26,6 +28,13 @@ def create_project_directory(project):
 
     return project_directory
 
+def delete_project_directory(project_directory):
+    shutil.rmtree(project_directory)
+    return project_directory
+
+def get_project_directory(project):
+    return PROJECTS_DIR / str(project.id)
+ 
 
 def add_image(project_path, image):
     input_path = project_path / "input"
