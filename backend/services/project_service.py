@@ -13,7 +13,7 @@ def create_project(db: Session):   #add project to db >> commit all >> refresh p
     try:
         db.add(project)
         db.flush()
-        project_directory = create_project_directory(project)
+        project_directory = create_project_directory(project.id)
         db.commit()
         db.refresh(project)
     except:
