@@ -26,7 +26,6 @@ def create_project(db: Session):   #add project to db >> commit all >> refresh p
     return project
 
 def get_project(db: Session, project_id: UUID):
-    project = db.get(Project, project_id)
-    if project is None:
-        print("Project with {project_is} not found")
-    return project
+    return db.get(Project, project_id)
+
+
