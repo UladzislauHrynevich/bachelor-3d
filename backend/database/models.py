@@ -57,7 +57,6 @@ class ProjectImage(Base):
     size_bytes:Mapped[int] = mapped_column(
         BigInteger,
         nullable=False
-
     )
     created_at:Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -66,4 +65,4 @@ class ProjectImage(Base):
     )
     project: Mapped["Project"] = relationship(
     back_populates="images"
-)
+    )

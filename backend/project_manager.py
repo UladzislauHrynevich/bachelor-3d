@@ -11,20 +11,25 @@ PROJECTS_DIR = BASE_DIR / "storage" / "projects"
 
 def create_project_directory(project_id):
     project_directory = get_project_directory(project_id)
-    project_directory.mkdir()
+    try:
+        project_directory.mkdir()
 
-    directories = [ 
-    "input",
-    "analysis", 
-    "colmap",
-    "gaussian",
-    "result", 
-    "metrics",
-    "logs"
-    ]
-    
-    for directory in directories:
-        project_directory.joinpath(directory).mkdir()
+        directories = [ 
+        "input",
+        "analysis", 
+        "colmap",
+        "gaussian",
+        "result", 
+        "metrics",
+        "logs"
+        ]
+        
+        for directory in directories:
+            project_directory.joinpath(directory).mkdir()
+    except:
+        if project_directory.exists():
+            delete_project_directory(project_directory)
+        raise
 
     return project_directory
 
