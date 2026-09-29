@@ -15,14 +15,13 @@ def create_project(db: Session):   #add project to db >> commit all >> refresh p
         db.flush()
         project_directory = create_project_directory(project.id)
         db.commit()
-        db.refresh(project)
-    except:
+    except Exception:
         db.rollback()
         if project_directory is not None:
             delete_project_directory(project_directory)
         raise
+    db.refresh(project)
     
-
     return project
 
 def get_project(db: Session, project_id: UUID):
