@@ -33,6 +33,9 @@ class Project(Base):
     images:Mapped[list["ProjectImage"]] = relationship(
         back_populates="project"
     )
+    processing_jobs: Mapped[list["ProcessingJob"]] = relationship(
+        back_populates="project"
+    )
 
 class ProjectImage(Base):
     __tablename__ = "images"
@@ -65,4 +68,47 @@ class ProjectImage(Base):
     )
     project: Mapped["Project"] = relationship(
     back_populates="images"
+    )
+
+class ProcessingJob(Base):
+    __tablename__ = "processing_jobs"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4
+    )
+
+    project_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("projects.id"),
+        nullable=False
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="pending"
+    )
+
+    provider: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="Google_collab"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now()
+    ) 
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    project: Mapped["Project"] = relationship(
+        back_populates="processing_jobs"
     )
