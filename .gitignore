@@ -8,3 +8,4 @@ __pycache__/
 storage/projects/*
 !storage/projects/.gitkeep
 .vscode/
+backend/database/docs/colabe.md
