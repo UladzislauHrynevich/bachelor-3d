@@ -14,6 +14,10 @@ from backend.services.project_service import (
     get_project,
 )
 from backend.services.image_service import create_image
+from backend.services.processing_service import (
+    create_processing_job,
+    claim_next_pending_job,
+)
 
 app = FastAPI()
 @app.post("/projects")
@@ -66,4 +70,56 @@ def upload_images(
             }
             for image in saved_images
         ]
+    }
+
+@app.post("/projects/{project_id}/process")
+def process_project(
+    project_id: UUID,
+    db: Session = Depends(get_db)
+):
+    project = get_project(db, project_id)
+
+    if project is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Project {project_id} not found"
+        )
+
+    if len(project.images) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Project has no images"
+        )
+
+    job = create_processing_job(
+        db=db,
+        project_id=project_id
+    )
+
+    return {
+        "job_id": str(job.id),
+        "project_id": str(job.project_id),
+        "status": job.status,
+        "provider": job.provider,
+        "created_at": job.created_at
+    }
+
+@app.post("/processing-jobs/claim")
+def claim_processing_job(
+    db: Session = Depends(get_db)
+):
+    job = claim_next_pending_job(db)
+
+    if job is None:
+        return {"job": None}
+
+    return {
+        "job": {
+            "id": str(job.id),
+            "project_id": str(job.project_id),
+            "status": job.status,
+            "provider": job.provider,
+            "created_at": job.created_at,
+            "started_at": job.started_at
+        }
     }
