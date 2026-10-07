@@ -54,3 +54,24 @@ def claim_next_pending_job(db: Session) -> ProcessingJob | None:
         raise
 
     return job
+
+def complete_processing_job(
+    db: Session,
+    job_id: UUID
+) -> ProcessingJob | None:
+    job = db.get(ProcessingJob, job_id)
+
+    if job is None:
+        return None
+
+    job.status = "completed"
+    job.finished_at = datetime.now(timezone.utc)
+
+    try:
+        db.commit()
+        db.refresh(job)
+    except Exception:
+        db.rollback()
+        raise
+
+    return job
