@@ -22,6 +22,8 @@ from backend.services.processing_service import (
     create_processing_job,
     claim_next_pending_job,
     complete_processing_job,
+    fail_processing_job,
+    retry_processing_job,
 )
 
 app = FastAPI()
@@ -170,6 +172,61 @@ def complete_job(
     db: Session = Depends(get_db)
 ):
     job = complete_processing_job(db, job_id)
+
+    if job is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Processing job {job_id} not found"
+        )
+
+    return {
+        "job_id": str(job.id),
+        "status": job.status,
+        "started_at": job.started_at,
+        "finished_at": job.finished_at
+    }
+
+
+@app.post("/processing-jobs/{job_id}/fail")
+def fail_job(
+    job_id: UUID,
+    db: Session = Depends(get_db)
+):
+    try:
+        job = fail_processing_job(db, job_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=409,
+            detail=str(e)
+        )
+
+    if job is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Processing job {job_id} not found"
+        )
+
+    return {
+        "job_id": str(job.id),
+        "status": job.status,
+        "started_at": job.started_at,
+        "finished_at": job.finished_at
+    }
+
+
+
+@app.post("/processing-jobs/{job_id}/retry")
+def retry_job(
+    job_id: UUID,
+    db: Session = Depends(get_db)
+):
+    try:
+        job = retry_processing_job(db, job_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=409,
+            detail=str(e)
+        )
 
     if job is None:
         raise HTTPException(

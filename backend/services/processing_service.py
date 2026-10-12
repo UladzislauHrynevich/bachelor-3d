@@ -75,3 +75,55 @@ def complete_processing_job(
         raise
 
     return job
+
+def fail_processing_job(
+        db: Session,
+        job_id: UUID,
+) -> ProcessingJob | None:
+    job = db.get(ProcessingJob, job_id)
+
+    if job is None:
+        return None
+    if job.status != "processing":
+        raise ValueError(
+            "Only processing job can be marked as failed"
+        )
+    job.status = "failed"
+    job.finished_at = datetime.now(timezone.utc)
+
+    try:
+        db.commit()
+        db.refresh(job)
+    except Exception:
+        db.rollback()
+        raise
+
+    return job
+
+    
+def retry_processing_job(
+    db: Session,
+    job_id: UUID
+) -> ProcessingJob | None:
+    job = db.get(ProcessingJob, job_id)
+
+    if job is None:
+        return None
+
+    if job.status != "failed":
+        raise ValueError(
+            "Only failed jobs can be retried"
+        )
+
+    job.status = "pending"
+    job.started_at = None
+    job.finished_at = None
+
+    try:
+        db.commit()
+        db.refresh(job)
+    except Exception:
+        db.rollback()
+        raise
+
+    return job
