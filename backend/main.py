@@ -24,6 +24,7 @@ from backend.services.processing_service import (
     complete_processing_job,
     fail_processing_job,
     retry_processing_job,
+    save_processing_result,
 )
 
 app = FastAPI()
@@ -239,4 +240,34 @@ def retry_job(
         "status": job.status,
         "started_at": job.started_at,
         "finished_at": job.finished_at
+    }
+
+@app.post("/processing-jobs/{job_id}/result")
+def upload_processing_result(
+    job_id: UUID,
+    archive: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    if not archive.filename or not archive.filename.lower().endswith(".zip"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only ZIP archives are supported"
+        )
+
+    try:
+        archive_path = save_processing_result(
+            db=db,
+            job_id=job_id,
+            archive=archive
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=409,
+            detail=str(e)
+        )
+
+    return {
+        "job_id": str(job_id),
+        "status": "uploaded",
+        "filename": archive_path.name
     }

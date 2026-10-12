@@ -40,6 +40,24 @@ def extract_input(archive: Path, destination: Path):
         zip_file.extractall(destination)
 
 
+def upload_result(job_id: str, archive_path: Path):
+    with archive_path.open("rb") as archive:
+        response = httpx.post(
+            f"{BACKEND_URL}/processing-jobs/{job_id}/result",
+            files={
+                "archive": (
+                    archive_path.name,
+                    archive,
+                    "application/zip"
+                )
+            },
+            timeout=120.0
+        )
+
+    response.raise_for_status()
+    return response.json()
+
+
 def process_next_job():
     job = claim_job()
 

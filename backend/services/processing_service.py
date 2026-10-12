@@ -1,7 +1,11 @@
 from uuid import UUID 
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
+from pathlib import Path
+import shutil
+from fastapi import UploadFile
 
+from backend.project_manager import get_project_directory
 from backend.database.models import ProcessingJob
 
 def create_processing_job(
@@ -127,3 +131,40 @@ def retry_processing_job(
         raise
 
     return job
+
+
+def save_processing_result(
+    db: Session,
+    job_id: UUID,
+    archive: UploadFile,
+) -> Path:
+    job = db.get(ProcessingJob, job_id)
+
+    if job is None:
+        raise ValueError(
+            f"Processing job {job_id} not found"
+        )
+
+    if job.status != "processing":
+        raise ValueError(
+            "Only processing jobs can upload results"
+        )
+
+    project_directory = get_project_directory(job.project_id)
+    result_directory = project_directory / "result" / str(job.id)
+
+    result_directory.mkdir(parents=True, exist_ok=True)
+
+    archive_path = result_directory / "result.zip"
+
+    if archive_path.exists():
+        raise ValueError("Result already uploaded")
+
+    try:
+        with archive_path.open("xb") as f:
+            shutil.copyfileobj(archive.file, f)
+    except Exception:
+        archive_path.unlink(missing_ok=True)
+        raise
+
+    return archive_path
