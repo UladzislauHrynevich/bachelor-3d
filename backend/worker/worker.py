@@ -1,5 +1,7 @@
+
 from pathlib import Path
 import zipfile
+import json
 
 import httpx
 
@@ -72,31 +74,85 @@ def process_next_job():
     archive_path = job_directory / "input.zip"
     input_directory = job_directory / "input"
 
-    job_directory.mkdir(
-        parents=True,
-        exist_ok=True
+    try:
+        job_directory.mkdir(parents=True, exist_ok=True)
+
+        print(f"Claimed job: {job_id}")
+        print(f"Project: {project_id}")
+
+        download_input(project_id, archive_path)
+        extract_input(archive_path, input_directory)
+
+        print("Input downloaded and extracted")
+
+        result_archive = create_test_result(
+            input_directory,
+            job_directory,
+        )
+
+        print(f"Test result created: {result_archive}")
+
+        upload_response = upload_result(job_id, result_archive)
+        print(f"Result uploaded: {upload_response}")
+
+        update_job_status(job_id, "complete")
+        print(f"Job {job_id} completed successfully")
+
+    except Exception:
+        print(f"Job {job_id} failed")
+
+        try:
+            update_job_status(job_id, "fail")
+        except Exception as status_error:
+            print(f"Could not report failure: {status_error}")
+
+        raise
+
+
+def create_test_result(input_directory: Path, job_directory: Path) -> Path:
+    """Temporary pipeline for testing the complete worker workflow."""
+    images = sorted(
+        p.name for p in input_directory.iterdir()
+        if p.is_file() and p.suffix.lower() in {".jpg", ".jpeg", ".png"}
     )
 
-    print(f"Claimed job: {job_id}")
-    print(f"Project: {project_id}")
+    if not images:
+        raise ValueError("No images found in input directory")
 
-    download_input(
-        project_id,
-        archive_path
+    result_directory = job_directory / "output"
+    result_directory.mkdir(parents=True, exist_ok=True)
+
+    metadata = {
+        "pipeline": "test",
+        "image_count": len(images),
+        "images": images,
+        "note": "Test result; no 3D reconstruction performed",
+    }
+
+    metadata_path = result_directory / "metadata.json"
+    metadata_path.write_text(
+        json.dumps(metadata, indent=2),
+        encoding="utf-8",
     )
 
-    print(f"Input downloaded: {archive_path}")
+    archive_path = job_directory / "result.zip"
 
-    extract_input(
-        archive_path,
-        input_directory
+    with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.write(metadata_path, arcname="metadata.json")
+
+    return archive_path
+
+
+def update_job_status(job_id: str, status: str):
+    if status not in {"complete", "fail"}:
+        raise ValueError(f"Unsupported status action: {status}")
+
+    response = httpx.post(
+        f"{BACKEND_URL}/processing-jobs/{job_id}/{status}",
+        timeout=30.0,
     )
-
-    print(f"Input extracted: {input_directory}")
-
-    images = list(input_directory.iterdir())
-
-    print(f"Files received: {len(images)}")
+    response.raise_for_status()
+    return response.json()
 
 
 if __name__ == "__main__":
