@@ -1,11 +1,16 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.responses import FileResponse
+from backend.project_manager import get_project_directory
 
 from typing import Annotated
 from sqlalchemy.orm import Session
 from uuid import UUID
 import shutil
 from pathlib import Path
+
+
+
+from backend.database.models import ProcessingJob
 
 from backend.project_manager import (
     validate_image,
@@ -271,3 +276,66 @@ def upload_processing_result(
         "status": "uploaded",
         "filename": archive_path.name
     }
+
+
+@app.get("/processing-jobs/{job_id}")
+def get_processing_job(
+    job_id: UUID,
+    db: Session = Depends(get_db),
+):
+    job = db.get(ProcessingJob, job_id)
+
+    if job is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Processing job not found",
+        )
+
+    return {
+        "id": str(job.id),
+        "project_id": str(job.project_id),
+        "status": job.status,
+        "provider": job.provider,
+        "created_at": job.created_at,
+        "started_at": job.started_at,
+        "finished_at": job.finished_at,
+    }
+
+
+@app.get("/processing-jobs/{job_id}/result")
+def download_processing_result(
+    job_id: UUID,
+    db: Session = Depends(get_db),
+):
+    job = db.get(ProcessingJob, job_id)
+
+    if job is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Processing job not found",
+        )
+
+    if job.status != "completed":
+        raise HTTPException(
+            status_code=409,
+            detail="Processing job is not completed",
+        )
+
+    result_path = (
+        get_project_directory(job.project_id)
+        / "result"
+        / str(job.id)
+        / "result.zip"
+    )
+
+    if not result_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Result archive not found",
+        )
+
+    return FileResponse(
+        path=result_path,
+        filename="result.zip",
+        media_type="application/zip",
+    )
