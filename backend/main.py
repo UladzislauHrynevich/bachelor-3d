@@ -1,3 +1,4 @@
+from backend.routers.projects import router as projects_router
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.responses import FileResponse
 from backend.project_manager import get_project_directory
@@ -33,57 +34,10 @@ from backend.services.processing_service import (
 )
 
 app = FastAPI()
-@app.post("/projects")
-def new_project(db: Session = Depends(get_db)):
-    project = create_project(db)
-    return {
-        "project_id": project.id
-    }
 
 
 
 
-@app.post("/projects/{project_id}/images")
-def upload_images(
-    project_id: UUID,
-    images: Annotated[list[UploadFile], File()],
-    db: Session = Depends(get_db)
-):
-    project = get_project(db, project_id)
-
-    if project is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Project {project_id} not found"
-        )
-
-   
-    for image in images:
-        try:
-            validate_image(image)
-        except ValueError as e:
-            raise HTTPException(
-                status_code=400,
-                detail=str(e)
-            )
-
-    saved_images = []
-
-    for image in images:
-        db_image = create_image(db, project_id, image)
-        saved_images.append(db_image)
-
-    return {
-        "images": [
-            {
-                "id": str(image.id),
-                "original_name": image.original_name,
-                "storage_path": image.storage_path,
-                "size_bytes": image.size_bytes
-            }
-            for image in saved_images
-        ]
-    }
 
 @app.post("/projects/{project_id}/process")
 def process_project(
@@ -137,40 +91,6 @@ def claim_processing_job(
         }
     }
 
-@app.get("/projects/{project_id}/input")
-def download_project_input(
-    project_id: UUID,
-    db: Session = Depends(get_db)
-):
-    project = get_project(db, project_id)
-
-    if project is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Project {project_id} not found"
-        )
-
-    input_directory = get_project_directory(project_id) / "input"
-
-    if not input_directory.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="Project input directory not found"
-        )
-
-    archive_base = Path("/tmp") / f"{project_id}_input"
-
-    zip_path = shutil.make_archive(
-        str(archive_base),
-        "zip",
-        input_directory
-    )
-
-    return FileResponse(
-        path=zip_path,
-        media_type="application/zip",
-        filename=f"{project_id}_input.zip"
-    )
 
 @app.post("/processing-jobs/{job_id}/complete")
 def complete_job(
@@ -339,3 +259,5 @@ def download_processing_result(
         filename="result.zip",
         media_type="application/zip",
     )
+
+app.include_router(projects_router)
