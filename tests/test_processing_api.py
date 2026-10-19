@@ -17,6 +17,7 @@ from backend.services.processing_service import (
     claim_next_pending_job,
     complete_processing_job,
 )
+import backend.routers.processing as processing_router
 
 
 @pytest.fixture
@@ -35,11 +36,11 @@ def api(tmp_path, monkeypatch):
     main.app.dependency_overrides[get_db] = override_get_db
 
     monkeypatch.setattr(
-        main,
-        "get_project_directory",
-        lambda project_id: tmp_path / str(project_id),
-    )
-
+          processing_router,
+          "get_project_directory",
+          lambda project_id: tmp_path / str(project_id),
+      )
+  
     try:
         with TestClient(main.app) as client:
             yield client, engine, tmp_path

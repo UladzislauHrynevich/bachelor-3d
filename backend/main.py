@@ -1,3 +1,4 @@
+from backend.routers.processing import router as processing_router
 from backend.routers.projects import router as projects_router
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.responses import FileResponse
@@ -39,225 +40,20 @@ app = FastAPI()
 
 
 
-@app.post("/projects/{project_id}/process")
-def process_project(
-    project_id: UUID,
-    db: Session = Depends(get_db)
-):
-    project = get_project(db, project_id)
-
-    if project is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Project {project_id} not found"
-        )
-
-    if len(project.images) == 0:
-        raise HTTPException(
-            status_code=400,
-            detail="Project has no images"
-        )
-
-    job = create_processing_job(
-        db=db,
-        project_id=project_id
-    )
-
-    return {
-        "job_id": str(job.id),
-        "project_id": str(job.project_id),
-        "status": job.status,
-        "provider": job.provider,
-        "created_at": job.created_at
-    }
-
-@app.post("/processing-jobs/claim")
-def claim_processing_job(
-    db: Session = Depends(get_db)
-):
-    job = claim_next_pending_job(db)
-
-    if job is None:
-        return {"job": None}
-
-    return {
-        "job": {
-            "id": str(job.id),
-            "project_id": str(job.project_id),
-            "status": job.status,
-            "provider": job.provider,
-            "created_at": job.created_at,
-            "started_at": job.started_at
-        }
-    }
-
-
-@app.post("/processing-jobs/{job_id}/complete")
-def complete_job(
-    job_id: UUID,
-    db: Session = Depends(get_db)
-):
-    job = complete_processing_job(db, job_id)
-
-    if job is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Processing job {job_id} not found"
-        )
-
-    return {
-        "job_id": str(job.id),
-        "status": job.status,
-        "started_at": job.started_at,
-        "finished_at": job.finished_at
-    }
-
-
-@app.post("/processing-jobs/{job_id}/fail")
-def fail_job(
-    job_id: UUID,
-    db: Session = Depends(get_db)
-):
-    try:
-        job = fail_processing_job(db, job_id)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=409,
-            detail=str(e)
-        )
-
-    if job is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Processing job {job_id} not found"
-        )
-
-    return {
-        "job_id": str(job.id),
-        "status": job.status,
-        "started_at": job.started_at,
-        "finished_at": job.finished_at
-    }
 
 
 
-@app.post("/processing-jobs/{job_id}/retry")
-def retry_job(
-    job_id: UUID,
-    db: Session = Depends(get_db)
-):
-    try:
-        job = retry_processing_job(db, job_id)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=409,
-            detail=str(e)
-        )
-
-    if job is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Processing job {job_id} not found"
-        )
-
-    return {
-        "job_id": str(job.id),
-        "status": job.status,
-        "started_at": job.started_at,
-        "finished_at": job.finished_at
-    }
-
-@app.post("/processing-jobs/{job_id}/result")
-def upload_processing_result(
-    job_id: UUID,
-    archive: UploadFile = File(...),
-    db: Session = Depends(get_db)
-):
-    if not archive.filename or not archive.filename.lower().endswith(".zip"):
-        raise HTTPException(
-            status_code=400,
-            detail="Only ZIP archives are supported"
-        )
-
-    try:
-        archive_path = save_processing_result(
-            db=db,
-            job_id=job_id,
-            archive=archive
-        )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=409,
-            detail=str(e)
-        )
-
-    return {
-        "job_id": str(job_id),
-        "status": "uploaded",
-        "filename": archive_path.name
-    }
 
 
-@app.get("/processing-jobs/{job_id}")
-def get_processing_job(
-    job_id: UUID,
-    db: Session = Depends(get_db),
-):
-    job = db.get(ProcessingJob, job_id)
-
-    if job is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Processing job not found",
-        )
-
-    return {
-        "id": str(job.id),
-        "project_id": str(job.project_id),
-        "status": job.status,
-        "provider": job.provider,
-        "created_at": job.created_at,
-        "started_at": job.started_at,
-        "finished_at": job.finished_at,
-    }
 
 
-@app.get("/processing-jobs/{job_id}/result")
-def download_processing_result(
-    job_id: UUID,
-    db: Session = Depends(get_db),
-):
-    job = db.get(ProcessingJob, job_id)
 
-    if job is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Processing job not found",
-        )
 
-    if job.status != "completed":
-        raise HTTPException(
-            status_code=409,
-            detail="Processing job is not completed",
-        )
 
-    result_path = (
-        get_project_directory(job.project_id)
-        / "result"
-        / str(job.id)
-        / "result.zip"
-    )
 
-    if not result_path.is_file():
-        raise HTTPException(
-            status_code=404,
-            detail="Result archive not found",
-        )
 
-    return FileResponse(
-        path=result_path,
-        filename="result.zip",
-        media_type="application/zip",
-    )
+
 
 app.include_router(projects_router)
+
+app.include_router(processing_router)
