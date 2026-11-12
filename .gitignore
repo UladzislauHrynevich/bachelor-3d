@@ -11,10 +11,10 @@ storage/projects/*
 backend/database/docs/colabe.md
 
 # Claude / локальные заметки
-CLAUDE.md
+#CLAUDE.md
 CLAUDE.local.md
 .claude/
-docs/PROGRESS.md
+#docs/PROGRESS.md
 
 # Результаты экспериментов (крупные файлы)
 experiments/*/
