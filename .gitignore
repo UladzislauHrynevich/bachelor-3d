@@ -9,3 +9,13 @@ storage/projects/*
 !storage/projects/.gitkeep
 .vscode/
 backend/database/docs/colabe.md
+
+# Claude / локальные заметки
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+docs/PROGRESS.md
+
+# Результаты экспериментов (крупные файлы)
+experiments/*/
+!experiments/README.md
