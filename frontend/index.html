@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bachelor-3d</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --text: #1d2330; --muted: #667085;
+    --border: #d9dde4; --accent: #2f6fde; --accent-text: #fff;
+    --ok: #1a7f4b; --ok-bg: #e6f4ec; --err: #b42318; --err-bg: #fdecea;
+    --warn: #8a5a00; --warn-bg: #fff4dc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171c; --panel: #1d2128; --text: #e6e8ec; --muted: #9aa3b2;
+      --border: #333a45; --accent: #5b8ff0; --accent-text: #0b1220;
+      --ok: #6fd39d; --ok-bg: #16301f; --err: #ff8a80; --err-bg: #3a1a18;
+      --warn: #f3c46b; --warn-bg: #352a12;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 20px; margin: 0 0 16px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  section {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px; margin-bottom: 16px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .row + .row { margin-top: 10px; }
+  label { color: var(--muted); }
+  input[type=text], input[type=number] {
+    font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px;
+  }
+  input[type=text] { width: min(100%, 340px); font-family: ui-monospace, monospace; }
+  input[type=number] { width: 90px; }
+  input[type=file] { max-width: 100%; }
+  button {
+    font: inherit; border: 1px solid var(--accent); background: var(--accent);
+    color: var(--accent-text); border-radius: 6px; padding: 6px 14px; cursor: pointer;
+  }
+  button.secondary { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .muted { color: var(--muted); }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  .tab {
+    background: transparent; color: var(--muted); border: none;
+    border-bottom: 2px solid transparent; border-radius: 0; padding: 8px 14px;
+  }
+  .tab[aria-selected=true] { color: var(--text); border-bottom-color: var(--accent); }
+  .msg { margin-top: 10px; padding: 8px 10px; border-radius: 6px; white-space: pre-wrap; }
+  .msg:empty { display: none; }
+  .msg.ok { background: var(--ok-bg); color: var(--ok); }
+  .msg.err { background: var(--err-bg); color: var(--err); }
+  .msg.info { background: var(--warn-bg); color: var(--warn); }
+  progress { width: min(100%, 420px); height: 14px; }
+  dl.info {
+    display: grid; grid-template-columns: max-content 1fr; gap: 2px 16px;
+    margin: 12px 0 0;
+  }
+  dl.info dt { color: var(--muted); }
+  dl.info dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .badge {
+    display: inline-block; padding: 1px 8px; border-radius: 10px;
+    font-size: 12px; font-weight: 600; background: var(--warn-bg); color: var(--warn);
+  }
+  .badge.done, .badge.completed { background: var(--ok-bg); color: var(--ok); }
+  .badge.failed { background: var(--err-bg); color: var(--err); }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px; margin-top: 12px;
+  }
+  .grid figure { margin: 0; }
+  .grid img {
+    width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block;
+    border-radius: 4px; background: var(--bg); border: 1px solid var(--border);
+  }
+  .grid figcaption { font-size: 11px; color: var(--muted); text-align: center; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>bachelor-3d</h1>
+
+  <!-- Project -->
+  <section>
+    <h2>Проект</h2>
+    <div class="row">
+      <button id="create-project">Создать проект</button>
+      <span class="muted">или открыть существующий:</span>
+      <input id="project-input" type="text" placeholder="project_id (UUID)" autocomplete="off">
+      <button id="open-project" class="secondary">Открыть</button>
+    </div>
+    <div class="row">
+      <span class="muted">Текущий проект:</span>
+      <code id="project-id">—</code>
+    </div>
+    <div id="project-msg" class="msg"></div>
+  </section>
+
+  <!-- Input -->
+  <section>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="photos" aria-selected="true">Фото</button>
+      <button class="tab" role="tab" data-tab="video" aria-selected="false">Видео</button>
+    </div>
+
+    <div id="tab-photos" role="tabpanel">
+      <div class="row">
+        <input id="photos-file" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple>
+        <button id="photos-upload" disabled>Загрузить фото</button>
+      </div>
+      <progress id="photos-progress" max="100" value="0" hidden></progress>
+      <div id="photos-msg" class="msg"></div>
+    </div>
+
+    <div id="tab-video" role="tabpanel" hidden>
+      <div class="row">
+        <input id="video-file" type="file" accept="video/*">
+      </div>
+      <div class="row">
+        <label for="frame-count">Число кадров (10–2000)</label>
+        <input id="frame-count" type="number" min="10" max="2000" step="1" value="300">
+        <button id="video-upload" disabled>Загрузить видео</button>
+      </div>
+      <div class="row" id="video-progress-row" hidden>
+        <progress id="video-progress" max="100" value="0"></progress>
+        <span id="video-progress-text" class="muted mono"></span>
+      </div>
+      <div id="video-msg" class="msg"></div>
+
+      <div id="video-info" hidden>
+        <dl class="info">
+          <dt>video_id</dt><dd class="mono" id="vi-id"></dd>
+          <dt>Статус</dt><dd><span class="badge" id="vi-status"></span></dd>
+          <dt>Файл</dt><dd id="vi-name"></dd>
+          <dt>Длительность</dt><dd id="vi-duration"></dd>
+          <dt>FPS</dt><dd id="vi-fps"></dd>
+          <dt>Разрешение</dt><dd id="vi-res"></dd>
+          <dt>Кадров в видео</dt><dd id="vi-total"></dd>
+          <dt>Извлечено кадров</dt><dd id="vi-extracted"></dd>
+        </dl>
+        <div id="vi-error" class="msg err"></div>
+      </div>
+
+      <div id="frames-block" hidden>
+        <h2 style="margin-top:16px">Кадры <span id="frames-count" class="muted"></span></h2>
+        <div id="frames-grid" class="grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Processing -->
+  <section>
+    <h2>Обработка</h2>
+    <div class="row">
+      <button id="process-start" disabled>Запустить обработку</button>
+    </div>
+    <div id="job-info" hidden>
+      <dl class="info">
+        <dt>job_id</dt><dd class="mono" id="job-id"></dd>
+        <dt>Статус</dt><dd><span class="badge" id="job-status"></span></dd>
+        <dt>Создана</dt><dd id="job-created"></dd>
+        <dt>Начата</dt><dd id="job-started"></dd>
+        <dt>Завершена</dt><dd id="job-finished"></dd>
+      </dl>
+      <div class="row" id="job-result" hidden>
+        <a id="job-result-link" href="#">Скачать result.zip</a>
+      </div>
+    </div>
+    <div id="process-msg" class="msg"></div>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+const MAX_VIDEO_SIZE = 2 * 1024 ** 3;
+const POLL_MS = 2000;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const $ = (id) => document.getElementById(id);
+
+// ---------------------------------------------------------------- storage
+const store = {
+  get(key) { try { return localStorage.getItem(key); } catch { return null; } },
+  set(key, value) {
+    try {
+      if (value == null) localStorage.removeItem(key);
+      else localStorage.setItem(key, value);
+    } catch { /* storage unavailable: ignore */ }
+  },
+};
+
+// ---------------------------------------------------------------- state
+let projectId = null;
+let generation = 0; // bumped on project switch to stop old pollers
+
+// ---------------------------------------------------------------- helpers
+function setMsg(el, text, kind = "info") {
+  el.className = "msg " + kind;
+  el.textContent = text || "";
+}
+
+function formatDetail(detail) {
+  if (detail == null) return "";
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    // FastAPI 422: [{loc: [...], msg: "..."}]
+    return detail.map((d) => {
+      const field = Array.isArray(d.loc) ? d.loc.filter((p) => p !== "body").join(".") : "";
+      return field ? `${field}: ${d.msg}` : d.msg;
+    }).join("\n");
+  }
+  return JSON.stringify(detail);
+}
+
+const STATUS_HINT = {
+  400: "Неверные данные",
+  404: "Не найдено",
+  409: "Конфликт",
+  413: "Файл слишком большой (максимум 2 GB)",
+  422: "Неверные параметры",
+  500: "Ошибка сервера",
+};
+
+function errorText(status, bodyText) {
+  let detail = "";
+  try { detail = formatDetail(JSON.parse(bodyText).detail); } catch { detail = ""; }
+  const hint = STATUS_HINT[status] || `HTTP ${status}`;
+  return detail ? `${hint} (${status}): ${detail}` : `${hint} (${status})`;
+}
+
+async function api(method, url, body) {
+  let response;
+  try {
+    response = await fetch(url, { method, body });
+  } catch (e) {
+    throw new Error("Сервер недоступен: " + e.message);
+  }
+  const text = await response.text();
+  if (!response.ok) throw new Error(errorText(response.status, text));
+  return text ? JSON.parse(text) : null;
+}
+
+function fmtNumber(value, digits = 2) {
+  return value == null ? "—" : Number(value).toFixed(digits).replace(/\.?0+$/, "");
+}
+
+function fmtDate(value) {
+  return value ? new Date(value).toLocaleString() : "—";
+}
+
+function fmtBytes(n) {
+  if (n >= 1024 ** 3) return (n / 1024 ** 3).toFixed(2) + " GB";
+  if (n >= 1024 ** 2) return (n / 1024 ** 2).toFixed(1) + " MB";
+  return Math.round(n / 1024) + " KB";
+}
+
+function setBadge(el, status) {
+  el.textContent = status || "—";
+  el.className = "badge " + (status || "");
+}
+
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+function projectUrl(path = "") {
+  return `/projects/${encodeURIComponent(projectId)}${path}`;
+}
+
+// ---------------------------------------------------------------- project
+function setProject(id) {
+  generation += 1;
+  projectId = id;
+  store.set("projectId", id);
+  $("project-id").textContent = id || "—";
+  for (const b of ["photos-upload", "video-upload", "process-start"]) $(b).disabled = !id;
+
+  // reset per-project views
+  for (const m of ["photos-msg", "video-msg", "process-msg"]) setMsg($(m), "");
+  $("video-info").hidden = true;
+  $("frames-block").hidden = true;
+  $("frames-grid").replaceChildren();
+  $("job-info").hidden = true;
+
+  if (!id) return;
+  const lastVideo = store.get(`lastVideo:${id}`);
+  if (lastVideo) pollVideo(lastVideo, generation);
+  const lastJob = store.get(`lastJob:${id}`);
+  if (lastJob) pollJob(lastJob, generation);
+}
+
+$("create-project").addEventListener("click", async () => {
+  const btn = $("create-project");
+  btn.disabled = true;
+  try {
+    const data = await api("POST", "/projects");
+    setProject(String(data.project_id));
+    $("project-input").value = "";
+    setMsg($("project-msg"), "Проект создан", "ok");
+  } catch (e) {
+    setMsg($("project-msg"), e.message, "err");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$("open-project").addEventListener("click", () => {
+  const id = $("project-input").value.trim();
+  if (!UUID_RE.test(id)) {
+    setMsg($("project-msg"), "Введите корректный project_id (UUID)", "err");
+    return;
+  }
+  setProject(id.toLowerCase());
+  setMsg($("project-msg"), "Проект открыт. Если такого проекта нет, сервер вернёт 404 при первом действии.", "info");
+});
+
+$("project-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") $("open-project").click();
+});
+
+// ---------------------------------------------------------------- tabs
+for (const tab of document.querySelectorAll(".tab")) {
+  tab.addEventListener("click", () => {
+    for (const t of document.querySelectorAll(".tab")) {
+      const active = t === tab;
+      t.setAttribute("aria-selected", String(active));
+      $("tab-" + t.dataset.tab).hidden = !active;
+    }
+  });
+}
+
+// ---------------------------------------------------------------- upload (XHR for progress)
+function xhrUpload(url, formData, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded, e.total); };
+    xhr.upload.onload = () => onProgress(null, null); // body sent, server is processing
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { reject(new Error("Некорректный ответ сервера")); }
+      } else {
+        reject(new Error(errorText(xhr.status, xhr.responseText)));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Сетевая ошибка при загрузке"));
+    xhr.onabort = () => reject(new Error("Загрузка прервана"));
+    xhr.send(formData);
+  });
+}
+
+// ---------------------------------------------------------------- photos
+$("photos-upload").addEventListener("click", async () => {
+  const files = $("photos-file").files;
+  const msg = $("photos-msg");
+  if (!projectId) return setMsg(msg, "Сначала создайте или откройте проект", "err");
+  if (!files.length) return setMsg(msg, "Выберите файлы", "err");
+
+  const form = new FormData();
+  for (const f of files) form.append("images", f, f.name);
+
+  const btn = $("photos-upload");
+  const bar = $("photos-progress");
+  btn.disabled = true;
+  bar.hidden = false;
+  bar.value = 0;
+  setMsg(msg, `Загрузка ${files.length} файлов…`, "info");
+  try {
+    const data = await xhrUpload(projectUrl("/images"), form, (loaded, total) => {
+      if (loaded == null) setMsg(msg, "Файлы отправлены, сервер проверяет изображения…", "info");
+      else bar.value = (loaded / total) * 100;
+    });
+    setMsg(msg, `Загружено фото: ${data.images.length}`, "ok");
+    $("photos-file").value = "";
+  } catch (e) {
+    setMsg(msg, e.message, "err");
+  } finally {
+    btn.disabled = !projectId;
+    bar.hidden = true;
+  }
+});
+
+// ---------------------------------------------------------------- video
+$("video-upload").addEventListener("click", async () => {
+  const file = $("video-file").files[0];
+  const msg = $("video-msg");
+  const frameCount = Number($("frame-count").value);
+
+  if (!projectId) return setMsg(msg, "Сначала создайте или откройте проект", "err");
+  if (!file) return setMsg(msg, "Выберите видеофайл", "err");
+  if (!Number.isInteger(frameCount) || frameCount < 10 || frameCount > 2000) {
+    return setMsg(msg, "Число кадров должно быть целым от 10 до 2000", "err");
+  }
+  if (file.size > MAX_VIDEO_SIZE) {
+    return setMsg(msg, `Файл ${fmtBytes(file.size)} больше лимита 2 GB`, "err");
+  }
+
+  const form = new FormData();
+  form.append("video", file, file.name);
+  form.append("frame_count", String(frameCount));
+
+  const btn = $("video-upload");
+  const row = $("video-progress-row");
+  const bar = $("video-progress");
+  const text = $("video-progress-text");
+  btn.disabled = true;
+  row.hidden = false;
+  bar.value = 0;
+  text.textContent = "";
+  setMsg(msg, "Загрузка видео…", "info");
+  $("video-info").hidden = true;
+  $("frames-block").hidden = true;
+
+  const gen = generation;
+  try {
+    const data = await xhrUpload(projectUrl("/video"), form, (loaded, total) => {
+      if (loaded == null) {
+        bar.value = 100;
+        setMsg(msg, "Видео загружено, сервер проверяет файл (ffprobe)…", "info");
+      } else {
+        bar.value = (loaded / total) * 100;
+        text.textContent = `${fmtBytes(loaded)} / ${fmtBytes(total)} (${Math.floor(bar.value)}%)`;
+      }
+    });
+    setMsg(msg, "Видео принято, извлечение кадров…", "ok");
+    $("video-file").value = "";
+    if (gen === generation) {
+      store.set(`lastVideo:${projectId}`, data.video_id);
+      pollVideo(data.video_id, gen);
+    }
+  } catch (e) {
+    setMsg(msg, e.message, "err");
+  } finally {
+    btn.disabled = !projectId;
+    row.hidden = true;
+  }
+});
+
+function renderVideo(v) {
+  $("video-info").hidden = false;
+  $("vi-id").textContent = v.video_id;
+  setBadge($("vi-status"), v.status);
+  $("vi-name").textContent = `${v.original_filename} (${fmtBytes(v.size_bytes)})`;
+  $("vi-duration").textContent = v.duration_s == null ? "—" : `${fmtNumber(v.duration_s)} с`;
+  $("vi-fps").textContent = fmtNumber(v.fps, 3);
+  $("vi-res").textContent = v.width && v.height ? `${v.width} × ${v.height}` : "—";
+  $("vi-total").textContent = v.total_frames ?? "—";
+  $("vi-extracted").textContent = `${v.extracted_frame_count} из запрошенных ${v.requested_frame_count}`;
+  $("vi-error").textContent = v.error || "";
+}
+
+async function pollVideo(videoId, gen) {
+  const msg = $("video-msg");
+  const base = projectUrl(`/videos/${encodeURIComponent(videoId)}`);
+  while (gen === generation) {
+    let v;
+    try {
+      v = await api("GET", base);
+    } catch (e) {
+      if (gen === generation) setMsg(msg, e.message, "err");
+      return;
+    }
+    if (gen !== generation) return;
+    renderVideo(v);
+    if (v.status === "done") {
+      setMsg(msg, "Кадры извлечены", "ok");
+      return loadFrames(videoId, gen);
+    }
+    if (v.status === "failed") {
+      setMsg(msg, "Извлечение кадров завершилось ошибкой", "err");
+      return;
+    }
+    await sleep(POLL_MS);
+  }
+}
+
+async function loadFrames(videoId, gen) {
+  const base = projectUrl(`/videos/${encodeURIComponent(videoId)}/frames`);
+  let frames;
+  try {
+    frames = await api("GET", base);
+  } catch (e) {
+    if (gen === generation) setMsg($("video-msg"), e.message, "err");
+    return;
+  }
+  if (gen !== generation) return;
+
+  const items = frames.map((f) => {
+    const fig = document.createElement("figure");
+    const img = document.createElement("img");
+    img.loading = "lazy";
+    img.decoding = "async";
+    img.alt = f.filename;
+    img.src = `${base}/${encodeURIComponent(f.filename)}`;
+    const cap = document.createElement("figcaption");
+    cap.textContent = f.timestamp_s == null
+      ? `#${f.frame_index}`
+      : `#${f.frame_index} · ${fmtNumber(f.timestamp_s)} с`;
+    fig.append(img, cap);
+    return fig;
+  });
+  $("frames-grid").replaceChildren(...items);
+  $("frames-count").textContent = `(${frames.length})`;
+  $("frames-block").hidden = false;
+}
+
+// ---------------------------------------------------------------- processing
+$("process-start").addEventListener("click", async () => {
+  const msg = $("process-msg");
+  if (!projectId) return setMsg(msg, "Сначала создайте или откройте проект", "err");
+  const btn = $("process-start");
+  btn.disabled = true;
+  const gen = generation;
+  try {
+    const data = await api("POST", projectUrl("/process"));
+    setMsg(msg, "Задача создана, ожидает воркер", "ok");
+    if (gen === generation) {
+      store.set(`lastJob:${projectId}`, data.job_id);
+      pollJob(data.job_id, gen);
+    }
+  } catch (e) {
+    setMsg(msg, e.message, "err");
+  } finally {
+    btn.disabled = !projectId;
+  }
+});
+
+async function pollJob(jobId, gen) {
+  const msg = $("process-msg");
+  while (gen === generation) {
+    let job;
+    try {
+      job = await api("GET", `/processing-jobs/${encodeURIComponent(jobId)}`);
+    } catch (e) {
+      if (gen === generation) setMsg(msg, e.message, "err");
+      return;
+    }
+    if (gen !== generation) return;
+    $("job-info").hidden = false;
+    $("job-id").textContent = job.id;
+    setBadge($("job-status"), job.status);
+    $("job-created").textContent = fmtDate(job.created_at);
+    $("job-started").textContent = fmtDate(job.started_at);
+    $("job-finished").textContent = fmtDate(job.finished_at);
+    $("job-result").hidden = job.status !== "completed";
+    $("job-result-link").href = `/processing-jobs/${encodeURIComponent(job.id)}/result`;
+
+    if (job.status === "completed") return setMsg(msg, "Обработка завершена", "ok");
+    if (job.status === "failed") return setMsg(msg, "Обработка завершилась ошибкой", "err");
+    if (job.status === "pending") setMsg(msg, "Ожидает воркер (pending)", "info");
+    if (job.status === "processing") setMsg(msg, "Воркер обрабатывает задачу…", "info");
+    await sleep(POLL_MS);
+  }
+}
+
+// ---------------------------------------------------------------- init
+const saved = store.get("projectId");
+setProject(saved && UUID_RE.test(saved) ? saved : null);
+</script>
+</body>
+</html>

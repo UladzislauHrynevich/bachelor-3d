@@ -9,3 +9,20 @@ storage/projects/*
 !storage/projects/.gitkeep
 .vscode/
 backend/database/docs/colabe.md
+
+# Claude / локальные заметки
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+docs/ai-rules.md
+docs/ai-declaration.md
+docs/implementation-report-ru.md
+docs/PROGRESS.md
+
+# Результаты экспериментов (крупные файлы)
+experiments/*/
+!experiments/README.md
+
+# Рабочие файлы воркера
+worker_data/
+tmp/
